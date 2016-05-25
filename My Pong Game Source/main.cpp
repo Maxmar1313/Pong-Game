@@ -6,7 +6,6 @@
 #include <fstream>
 #include "Ball.h"
 #include "Platform.h"
-#include <list>
 
 
 using namespace sf;
@@ -15,7 +14,7 @@ using namespace std;
 const int MAX_RAND_SIZE = 37535;
 unsigned char speed = 1;
 bool isGameStarted = false;
-
+bool onCollision = false;
 unsigned int score=0;
 
 Vector2f position;
@@ -176,10 +175,14 @@ void update()
 	platform[1].velocity.y = sf::Mouse::getPosition(window).y - platform[1].position.y;
 	platform[2].velocity.x = sf::Mouse::getPosition(window).x - platform[2].position.x;
 	platform[3].velocity.y = sf::Mouse::getPosition(window).y - platform[3].position.y;
+
 	getRandomNumber();
-	for (int i = 0; i < 4; ++i) {
+
+	for (int i = 0; i < 4; ++i) 
+	{
 		platform[i].move();
 	}
+
 	ball.move();
 	isGameOver();
 	updateScore();
@@ -228,7 +231,7 @@ Vector2f collision(Platform platform)
 	Vector2f temp;
 	//collision from face
 	if (platform.min.y > ball.min.y && platform.min.x <ball.max.x && platform.max.x> ball.min.x && platform.max.y>ball.max.y)
-	{
+	{	
 		temp = (-(2 * dot(ball.velocity, platform.faceNormal)) * platform.faceNormal) + ball.velocity;
 	}
 	//collision from back
@@ -259,18 +262,21 @@ void narrowPhase(Platform platform)
 {
 
 	if (platform.min.x - ball.max.x < 0.0f && ball.min.x - platform.max.x < 0.0f)
-	{
+	{	
+		onCollision = true;
+
 		ball.velocity = collision(platform);
+
 		if (vectorLength(ball.velocity) < 25) 
 		{
 			//increasing velocity by 1 unit
 			ball.setVelocity(
-				(
-					ball.velocity / vectorLength(ball.velocity)
-					)
-				+ ball.velocity);
+					(	
+						ball.velocity / vectorLength(ball.velocity)	)	+ ball.velocity
+					);
 		}
 	}
+	else onCollision = false;
 }
 //testing for any "possible" collision
 void broadPhase()
@@ -345,15 +351,7 @@ void isGameOver()
 		window.close();
 	}
 }
-void printHighScore(myList &highScore)
-{
-	Node *node = highScore.head;
-	while (node != NULL) 
-	{
-		printf("Score is equal: %i\n", node->value);
-		node = node->next;
-	}
-}
+
 
 void readHighScore(myList &highScore)
 {
@@ -372,6 +370,7 @@ void readHighScore(myList &highScore)
 	//if file is empty, then fill it with 0s (reseting highScore)
 	else if(EOF)
 	{
+		MessageBox(NULL, "Reseting High Score", NULL, NULL);
 		highScore.fill(10, 0);
 		writeToHighScore(highScore);
 	}
@@ -382,20 +381,26 @@ void updateHighScore(int score)
 {	
 	myList highScore;
 	readHighScore(highScore);
+	highScore.printHighScore();
 	Node *temp = highScore.tail;
-	int counter = 9;
+	Node *nodeToBeSwapped=NULL;
 
-	while (temp->value<score && counter>0)
-	{
-		--counter;
+	while (temp != NULL && score > temp->value)
+	{	printf("tutaj\n");
+		nodeToBeSwapped = temp;
 		temp = temp->previous;
 	}
-	Node *swapper=new Node();
-	swapper->value = score;
-
-	highScore.insert(swapper, temp);
-	printHighScore(highScore);
+	if (nodeToBeSwapped != NULL)
+	{
+		
+		temp = new Node();
+		temp->value = score;
+		highScore.insert(temp, nodeToBeSwapped);
+	}
+	highScore.printHighScore();
 	writeToHighScore(highScore);
+	getchar();
+
 }
 
 

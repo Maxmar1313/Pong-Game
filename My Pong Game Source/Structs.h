@@ -130,16 +130,25 @@ struct myList
 		}
 		else
 		{
-			Node *temp = nodeToBeSwapped->next;
-			nodeToBeSwapped->next = swapper;
-			swapper->previous = nodeToBeSwapped;
-			swapper->next = temp;
+			Node *temp = nodeToBeSwapped->previous;
+			nodeToBeSwapped->previous = swapper;
+			swapper->next = nodeToBeSwapped;
+			swapper->previous = temp;
+			temp->next = swapper;
 			tail = tail->previous;
 			delete tail->next;
 			tail->next = NULL;
-
 		}
 
+	}
+	void printHighScore()
+	{
+		Node *node = head;
+		while (node != NULL)
+		{
+			printf("Score is equal: %i\n", node->value);
+			node = node->next;
+		}
 	}
 };
 
