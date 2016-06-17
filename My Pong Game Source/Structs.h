@@ -2,9 +2,12 @@
 
 #define _USE_MATH_DEFINES
 #include <math.h>
+#include <string.h>
+#include <iostream>
 struct Node
 {
 	int value;
+	std::string name;
 	Node *next = NULL;
 	Node *previous = NULL;
 };
@@ -14,10 +17,11 @@ struct myList
 	Node *head = NULL;
 	Node *tail = NULL;
 	//add element at the end of list
-	void add(int &value)
+	void add(int &value,char name[4])
 	{
 		Node *node = new Node();//this does not produce memory leak, it is intended to be this way;
 		node->value = value;
+		node->name=name;
 		if (this->empty())
 		{
 			head = node;
@@ -36,18 +40,22 @@ struct myList
 	{
 
 	}
-	void fill(int number, int value)
+	void fill(int number, int value,char name[4])
 	{
 		Node *newNode = new Node();
 		newNode->value = value;
+		newNode->name = name;
 		head = newNode;
+		tail = newNode;
 		for (int i = 0; i < number - 1; ++i)
 		{
 			Node *node = new Node();
 			node->value = value;
+			node->name = name;
 			newNode->next = node;
 			node->previous = newNode;
 			newNode = node;
+			tail = node;
 		}
 	}
 
@@ -126,7 +134,7 @@ struct myList
 			swapper->previous = tail->previous;
 			delete(tail);
 			tail = swapper;
-			//tail->next is already null;
+			//tail->next is already null, DO NOT UNCOMMENT THIS LINE
 		}
 		else
 		{
@@ -146,7 +154,7 @@ struct myList
 		Node *node = head;
 		while (node != NULL)
 		{
-			printf("Score is equal: %i\n", node->value);
+			printf("Name: %s Score: %i\n", node->name.c_str(), node->value);
 			node = node->next;
 		}
 	}

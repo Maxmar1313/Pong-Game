@@ -6,6 +6,8 @@
 #include <fstream>
 #include "Ball.h"
 #include "Platform.h"
+//#include <string>
+#include "HighScore.h"
 
 
 using namespace sf;
@@ -28,7 +30,6 @@ Text initialText;
 Ball ball(502, 380, 20, Color::White);
 Platform platform[4];
 
-
 //Frontal declarations of functions
 Vector2f operator+(Vector2f vector, Vector2f vector2);
 Vector2f operator*(Vector2f vector, RotationMatrix rotationMatrix);
@@ -40,13 +41,12 @@ double vectorLength(Vector2f vector);
 unsigned short getRandomNumber();
 short distance(Vector2f position, Vector2f position2);
 void printPosition(Vector2f vector);
-void updateHighScore(int score);
 void update();
 void render();
 void handleEvent();
 void broadPhase();
-void isGameOver();
-
+void whenGameIsOver();
+void setText(Text &ObjText, Font &font, Color color, int size, string text, Vector2f position);
 
 int main()
 {
@@ -55,7 +55,7 @@ int main()
 	//{1,0}right GlobalNormal
 	//{0,1}down GlobalNormal
 	//{0,-1}up GlobalNormal	
-
+	
 				//position x, position y, width, height, Color      ,faceNormal ,backNormal ,leftNormal , rightNormal
 	platform[0] = { 512 - 40 ,  750 - 8 ,  150, 20,Color::White     ,{0,-1 }   ,{0 ,1 }   ,{-1,0 }   ,{ 1,0 }		}; //kinda tryhard ;p but it works, so its not stupid
 	platform[1] = { 20, 380, 20, 150, Color::White					,{ 1,0 }   ,{-1,0 }   ,{ 0,-1}	 ,{ 0,1 }		};
@@ -67,24 +67,12 @@ int main()
 
 	if (!font.loadFromFile("C:\\Windows\\Fonts\\arial.ttf")) 
 	{
-		MessageBox(NULL,"Couldn't load font",NULL,NULL);
+		MessageBox(NULL,"ERROR:Couldn't load font",NULL,NULL);
 		window.close();
 	}
 	
-	
-	scoreText.setFont(font);
-	scoreText.setColor(sf::Color::Red);
-	scoreText.setCharacterSize(24);
-	scoreText.setString("Score: 0");
-
-	initialText.setFont(font);
-	initialText.setColor(sf::Color::White);
-	initialText.setCharacterSize(20);
-	initialText.setString("Press space to start");
-	initialText.setPosition({ 420,320 });
-	
-
-
+	setText(scoreText, font, Color::Red, 24, "Score: 0", {0,0});
+	setText(initialText, font, Color::White, 20, "Press space to start", { 420,320 });
 
 	//game loop
 	clock_t previous = clock();
@@ -142,7 +130,6 @@ void handleEvent()
 
 }
 
-
 unsigned short getRandomNumber()
 {
 
@@ -153,6 +140,7 @@ unsigned short getRandomNumber()
 	return rand;
 
 }
+
 void updateScore()
 {
 	int dist = distance(position, ball.position);
@@ -176,17 +164,16 @@ void update()
 	platform[2].velocity.x = sf::Mouse::getPosition(window).x - platform[2].position.x;
 	platform[3].velocity.y = sf::Mouse::getPosition(window).y - platform[3].position.y;
 
-	getRandomNumber();
-
 	for (int i = 0; i < 4; ++i) 
 	{
 		platform[i].move();
 	}
 
-	ball.move();
-	isGameOver();
-	updateScore();
+	whenGameIsOver();
 	broadPhase();
+
+	ball.move();
+	updateScore();
 }
 
 void render()
@@ -213,7 +200,6 @@ short distance(Vector2f position, Vector2f position2)
 	float x = position2.x - position.x;
 	float y = position2.y - position.y;
 	float f= sqrt(pow(x, 2) + pow(y, 2));
-	//printf("distance is %f\n", f);
 	return f;
 }
 
@@ -242,6 +228,7 @@ Vector2f collision(Platform platform)
 	else if (platform.min.x < ball.min.x && platform.max.x > ball.min.x)
 	{
 		temp = (-(2 * dot(ball.velocity, platform.leftNormal)) * platform.leftNormal) + ball.velocity;
+
 	}//collision from right
 	else if (platform.min.x < ball.min.x && platform.min.y > ball.min.y&& platform.min.y < ball.max.y)
 	{
@@ -251,6 +238,7 @@ Vector2f collision(Platform platform)
 
 	return temp;
 }
+
 //return magnitude of provided vector
 double vectorLength(Vector2f vector)
 {
@@ -278,6 +266,7 @@ void narrowPhase(Platform platform)
 	}
 	else onCollision = false;
 }
+
 //testing for any "possible" collision
 void broadPhase()
 {
@@ -291,6 +280,7 @@ void broadPhase()
 		}
 	}
 }
+
 //overloading operator to add two vectors. Much prettier than separate function
 Vector2f operator+(Vector2f vector, Vector2f vector2)
 {
@@ -306,6 +296,7 @@ void printPosition(Vector2f vector)
 	printf("Position x is: %f, Position y is : %f\n", vector.x,vector.y);
 
 }
+
 //rotation about angle from orgin of object
 Vector2f rotate2D(double angle,Vector2f point) 
 {
@@ -321,6 +312,7 @@ Vector2f operator*(Vector2f vector, RotationMatrix rotationMatrix)
 	temp.y = vector.x*rotationMatrix.matrix[0][1] + vector.y*rotationMatrix.matrix[1][1];
 	return temp;
 }
+
 //this function returns Vector/Point devided by scalar
 Vector2f operator/(Vector2f vector, double divisor)
 {
@@ -329,78 +321,184 @@ Vector2f operator/(Vector2f vector, double divisor)
 	return vector;
 }
 
-void writeToHighScore(myList &highScore)
+void drawTextes(const Text &gameOverText , const Text &enterNameText, const Text &providedNameText, const Text &scoreText,const Text &resultText)
 {
-	ofstream mystream("highscore.dat");
-	Node *node = highScore.head;
-	while (node!=NULL)
-	{	
-		mystream << node->value<< endl;
-		node = node->next;
-	}
-	mystream.close();
+	window.draw(gameOverText);
+	window.draw(enterNameText);
+	window.draw(providedNameText);
+	window.draw(scoreText);
+	window.draw(resultText);
 }
-void isGameOver()
+
+void gameOverInput(Event &myEvent, string &userName,char &chosenLetter,pair<unsigned char,unsigned char>&myPair,int &i)
+{
+	switch (myEvent.type)
+		//Return represents 'Enter' key, it is named as Return, because of historical reasons(in typewriters key, that was in place of nowadays enter, was name as Return)
+	{
+
+	case Event::KeyPressed:
+		if (myEvent.key.code == Keyboard::Return)
+		{
+			userName[i] = chosenLetter;
+			++i;
+			cout << userName << endl;
+			break;
+		}
+		if (myEvent.key.code == Keyboard::BackSpace)
+		{
+			if (i > 0)
+			{
+				--i;
+				userName[i] = '_';
+			}
+			break;
+		}
+
+		if (myEvent.key.code == Keyboard::Up)
+		{
+			if (myPair.first == 0)
+			{
+				chosenLetter += 13;
+				myPair.first += 1;
+			}
+			else
+			{
+				myPair.first -= 1;
+				chosenLetter -= 13;
+			}
+			break;
+		}
+		if (myEvent.key.code == Keyboard::Down)
+		{
+			if (myPair.first == 1)
+			{
+				myPair.first -= 1;
+				chosenLetter -= 13;
+			}
+			else
+			{
+				chosenLetter += 13;
+				myPair.first += 1;
+			}
+			break;
+		}
+		if (myEvent.key.code == Keyboard::Left)
+		{
+			if (myPair.second == 0)
+			{
+				chosenLetter += 12;
+				myPair.second += 12;
+			}
+			else
+			{
+				myPair.second -= 1;
+				chosenLetter -= 1;
+			}
+			break;
+		}
+		if (myEvent.key.code == Keyboard::Right)
+		{
+			if (myPair.second == 12)
+			{
+				chosenLetter -= 12;
+				myPair.second -= 12;
+			}
+			else
+			{
+				chosenLetter += 1;
+				myPair.second += 1;
+			}
+			break;
+		}
+	}
+}
+
+void setMarker(RectangleShape &marker,Vector2f position)
+{
+	marker.setFillColor(Color::White);
+	marker.setPosition(position);
+	marker.setSize({ 20,20 });
+}
+//a little bit ugly
+string fetchNameFromUser()
+{	
+	string resultString= "You have ended the game with score:" + std::to_string(score);
+	
+	Text alphabet [26];
+
+	Text resultText;
+	setText(resultText, font, Color::White, 35, resultString, { 200,220 });
+
+	Text enterNameText;
+	setText(enterNameText, font, Color::White, 30, "Please Enter Your Name", { 340,300 });
+
+	Text gameOverText;
+	setText(gameOverText, font, Color::Red, 40, "GAME OVER", { 370,150 });
+
+	pair <unsigned char, unsigned char> myPair = { 0,0 };
+	char chosenLetter = 'A';
+	string userName = "___";
+
+	Text providedNameText;
+
+	RectangleShape marker;
+	while (window.waitEvent(myEvent))
+	{
+		window.clear(Color::Black);
+		setText(providedNameText, font, Color::White, 30, userName, { 460,360 });
+		drawTextes(gameOverText, enterNameText, providedNameText, scoreText,resultText);
+
+		int j = 1;
+		int k = 0;
+
+		for (unsigned char i = 0; i<26; ++i)
+		{	
+			if (0 == i % 13) 
+			{
+					++j; k=0;
+			}
+			++k;
+			char letter[2] = "A";
+			letter[0] = letter[0] + i;
+	
+			setText(alphabet[i], font, Color::White, 20 , letter , {350.0f+20*k,380.0f+20*j});
+			window.draw(alphabet[i]);
+		}
+
+		setMarker(marker, alphabet[chosenLetter - 65].getPosition());
+		window.draw(marker);
+	
+		static int i = 0;
+		gameOverInput(myEvent, userName, chosenLetter, myPair, i);
+
+		window.display();
+
+		if (3 == i)
+			return userName;
+	}
+}
+
+void whenGameIsOver()
 {
 	if (ball.min.x <= 0 || ball.min.y <= 0 || ball.max.x >= 1024 || ball.max.y >= 800)
 	{
 		char text[60];
 		sprintf_s(text,"You have ended the game with score : %i",score);
 		MessageBox(NULL,text , NULL, NULL);
-		updateHighScore(score);
+		string name;
+		name=fetchNameFromUser();
+		
+		HighScore::updateHighScore(score,name);
+		getchar();
 		window.close();
 	}
 }
 
-
-void readHighScore(myList &highScore)
+void setText(Text &ObjText,Font &font ,Color color, int size, string text, Vector2f position)
 {
-	string mystring;
-	fstream mystream("highscore.dat", ios::in);
-
-	if (mystream && !mystream.eof())
-	{
-		for (int i = 0; i < 10; ++i)
-		{
-			getline(mystream, mystring);
-			int value = atoi(mystring.c_str());
-			highScore.add(value);
-		}
-	} 
-	//if file is empty, then fill it with 0s (reseting highScore)
-	else if(EOF)
-	{
-		MessageBox(NULL, "Reseting High Score", NULL, NULL);
-		highScore.fill(10, 0);
-		writeToHighScore(highScore);
-	}
-
+	ObjText.setFont(font);
+	ObjText.setColor(color);
+	ObjText.setCharacterSize(size);
+	ObjText.setString(text);
+	ObjText.setPosition(position);
 }
-
-void updateHighScore(int score)
-{	
-	myList highScore;
-	readHighScore(highScore);
-	highScore.printHighScore();
-	Node *temp = highScore.tail;
-	Node *nodeToBeSwapped=NULL;
-
-	while (temp != NULL && score > temp->value)
-	{	printf("tutaj\n");
-		nodeToBeSwapped = temp;
-		temp = temp->previous;
-	}
-	if (nodeToBeSwapped != NULL)
-	{
-		
-		temp = new Node();
-		temp->value = score;
-		highScore.insert(temp, nodeToBeSwapped);
-	}
-	highScore.printHighScore();
-	writeToHighScore(highScore);
-	getchar();
-
-}
-
-
