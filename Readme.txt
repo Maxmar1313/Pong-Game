@@ -1,5 +1,5 @@
 This is my first game ever, done in SFML and C++.
-It is not best project, it is not pretty, but main purpose of it is for me to learn new things.
+It is not best project, it is not pretty, but main purpose of it is to learn new things.
 Things I have lernt from this project:
 + GameLoop
 + Handling user input
